@@ -138,12 +138,21 @@ pub fn run() {
                 let (event_tx, event_rx) = mpsc::channel::<MpvThreadEvent>();
 
                 let redraw_tx = event_tx.clone();
+                let resize_tx = event_tx.clone();
+
                 render_context.set_update_callback(move || {
                     redraw_tx.send(MpvThreadEvent::Redraw).ok();
                 });
 
                 mpv.set_wakeup_callback(move || {
                     event_tx.send(MpvThreadEvent::MpvEvents).ok();
+                });
+
+                window.on_window_event(move |event| match event {
+                    tauri::WindowEvent::Resized(_) => {
+                        resize_tx.send(MpvThreadEvent::Redraw).ok();
+                    }
+                    _ => {}
                 });
 
                 let video_path = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
