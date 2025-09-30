@@ -78,7 +78,7 @@ pub fn run() {
                 let raw_window_handle = window.window_handle().unwrap().as_raw();
                 let raw_display_handle = window.display_handle().unwrap().as_raw();
 
-                let gl_display = Arc::new(unsafe {
+                let display = Arc::new(unsafe {
                     let preference = DisplayApiPreference::WglThenEgl(Some(raw_window_handle));
                     glutin::display::Display::new(raw_display_handle, preference)
                         .expect("Failed to create glutin display")
@@ -89,31 +89,31 @@ pub fn run() {
                 let template = glutin::config::ConfigTemplateBuilder::new()
                     .compatible_with_native_window(raw_window_handle);
 
-                let gl_config = unsafe {
-                    gl_display
+                let config = unsafe {
+                    display
                         .find_configs(template.build())
                         .unwrap()
                         .next()
                         .expect("No suitable config found")
                 };
 
-                let gl_surface = unsafe {
-                    gl_display
-                        .create_window_surface(&gl_config, &surface_attributes)
+                let surface = unsafe {
+                    display
+                        .create_window_surface(&config, &surface_attributes)
                         .expect("Failed to create window surface")
                 };
 
                 let context_attributes =
                     glutin::context::ContextAttributesBuilder::new().build(Some(raw_window_handle));
 
-                let gl_context = unsafe {
-                    gl_display
-                        .create_context(&gl_config, &context_attributes)
+                let context = unsafe {
+                    display
+                        .create_context(&config, &context_attributes)
                         .expect("Failed to create context")
                 };
 
-                let current_context = gl_context
-                    .make_current(&gl_surface)
+                let current_context = context
+                    .make_current(&surface)
                     .expect("Failed to make context current");
 
                 let mut mpv = Mpv::with_initializer(|init| {
@@ -129,7 +129,7 @@ pub fn run() {
                         RenderParam::ApiType(RenderParamApiType::OpenGl),
                         RenderParam::InitParams(OpenGLInitParams {
                             get_proc_address,
-                            ctx: gl_display.clone(),
+                            ctx: display.clone(),
                         }),
                     ],
                 )
@@ -164,7 +164,7 @@ pub fn run() {
                                 )
                                 .expect("Failed to draw video frame");
 
-                            gl_surface
+                            surface
                                 .swap_buffers(&current_context)
                                 .expect("Failed to swap buffers");
                         }
