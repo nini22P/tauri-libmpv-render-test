@@ -79,7 +79,24 @@ pub fn run() {
                 let raw_display_handle = window.display_handle().unwrap().as_raw();
 
                 let display = Arc::new(unsafe {
+                    #[cfg(windows)]
                     let preference = DisplayApiPreference::WglThenEgl(Some(raw_window_handle));
+
+                    #[cfg(all(unix, not(target_os = "macos")))]
+                    let preference = {
+                        match raw_display_handle {
+                            raw_window_handle::RawDisplayHandle::Wayland(_) => DisplayApiPreference::Egl,
+                            raw_window_handle::RawDisplayHandle::Xlib(_)
+                            | raw_window_handle::RawDisplayHandle::Xcb(_) => DisplayApiPreference::GlxThenEgl(
+                                Box::new(winit::platform::x11::register_xlib_error_hook),
+                            ),
+                            _ => DisplayApiPreference::Egl,
+                        }
+                    };
+
+                    #[cfg(target_os = "macos")]
+                    let preference = DisplayApiPreference::Cgl;
+
                     glutin::display::Display::new(raw_display_handle, preference)
                         .expect("Failed to create glutin display")
                 });
